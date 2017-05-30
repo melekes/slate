@@ -3,12 +3,9 @@ title: API Reference
 
 language_tabs:
   - shell
-  - ruby
-  - python
-  - javascript
+  - go
 
 toc_footers:
-  - <a href='#'>Sign Up for a Developer Key</a>
   - <a href='https://github.com/tripit/slate'>Documentation Powered by Slate</a>
 
 includes:
@@ -19,171 +16,166 @@ search: true
 
 # Introduction
 
-Welcome to the Kittn API! You can use our API to access Kittn API endpoints, which can get information on various cats, kittens, and breeds in our database.
+Tendermint supports the following RPC protocols:
 
-We have language bindings in Shell, Ruby, and Python! You can view code examples in the dark area to the right, and you can switch the programming language of the examples with the tabs in the top right.
+* URI over HTTP
+* JSONRPC over HTTP
+* JSONRPC over websockets
 
-This example API documentation page was created with [Slate](https://github.com/tripit/slate). Feel free to edit it and use it as a base for your own API's documentation.
+Tendermint RPC is build using [our own RPC library](https://github.com/tendermint/tendermint/tree/master/rpc/lib). Documentation and tests for that library could be found at `tendermint/rpc/lib` directory.
 
-# Authentication
+## Configuration
 
-> To authorize, use this code:
+Set the `laddr` config parameter under `[rpc]` table in the $TMHOME/config.toml file or the `--rpc.laddr` command-line flag to the desired protocol://host:port setting.  Default: `tcp://0.0.0.0:46657`.
 
-```ruby
-require 'kittn'
+## Arguments
 
-api = Kittn::APIClient.authorize!('meowmeowmeow')
+Arguments which expect strings or byte arrays may be passed as quoted strings, like `"abc"` or as `0x`-prefixed strings, like `0x616263`.
+
+## URI/HTTP
+
+> Example request:
+
+```bash
+curl 'http://localhost:46657/broadcast_tx_sync?tx="abc"'
 ```
 
-```python
-import kittn
-
-api = kittn.authorize('meowmeowmeow')
-```
-
-```shell
-# With shell, you can just pass the correct header with each request
-curl "api_endpoint_here"
-  -H "Authorization: meowmeowmeow"
-```
-
-```javascript
-const kittn = require('kittn');
-
-let api = kittn.authorize('meowmeowmeow');
-```
-
-> Make sure to replace `meowmeowmeow` with your API key.
-
-Kittn uses API keys to allow access to the API. You can register a new Kittn API key at our [developer portal](http://example.com/developers).
-
-Kittn expects for the API key to be included in all API requests to the server in a header that looks like the following:
-
-`Authorization: meowmeowmeow`
-
-<aside class="notice">
-You must replace <code>meowmeowmeow</code> with your personal API key.
-</aside>
-
-# Kittens
-
-## Get All Kittens
-
-```ruby
-require 'kittn'
-
-api = Kittn::APIClient.authorize!('meowmeowmeow')
-api.kittens.get
-```
-
-```python
-import kittn
-
-api = kittn.authorize('meowmeowmeow')
-api.kittens.get()
-```
-
-```shell
-curl "http://example.com/api/kittens"
-  -H "Authorization: meowmeowmeow"
-```
-
-```javascript
-const kittn = require('kittn');
-
-let api = kittn.authorize('meowmeowmeow');
-let kittens = api.kittens.get();
-```
-
-> The above command returns JSON structured like this:
+> Response:
 
 ```json
-[
-  {
-    "id": 1,
-    "name": "Fluffums",
-    "breed": "calico",
-    "fluffiness": 6,
-    "cuteness": 7
+{
+  "error": "",
+  "result": {
+    "hash": "2B8EC32BA2579B3B8606E42C06DE2F7AFA2556EF",
+    "log": "",
+    "data": "",
+    "code": 0
   },
-  {
-    "id": 2,
-    "name": "Max",
-    "breed": "unknown",
-    "fluffiness": 5,
-    "cuteness": 10
-  }
-]
+  "id": "",
+  "jsonrpc": "2.0"
+}
 ```
 
-This endpoint retrieves all kittens.
+The first entry in the result-array (`96`) is the method this response correlates with. `96` refers to "ResultTypeBroadcastTx", see [responses.go](https://github.com/tendermint/tendermint/blob/master/rpc/core/types/responses.go) for a complete overview.
 
-### HTTP Request
+## JSONRPC/HTTP
 
-`GET http://example.com/api/kittens`
+JSONRPC requests can be POST'd to the root RPC endpoint via HTTP (e.g. `http://localhost:46657/`).
 
-### Query Parameters
+> Example request:
 
-Parameter | Default | Description
---------- | ------- | -----------
-include_cats | false | If set to true, the result will also include cats.
-available | true | If set to false, the result will include kittens that have already been adopted.
-
-<aside class="success">
-Remember — a happy kitten is an authenticated kitten!
-</aside>
-
-## Get a Specific Kitten
-
-```ruby
-require 'kittn'
-
-api = Kittn::APIClient.authorize!('meowmeowmeow')
-api.kittens.get(2)
+```json
+{
+  "method": "broadcast_tx_sync",
+  "jsonrpc": "2.0",
+  "params": [ "abc" ],
+  "id": "dontcare"
+}
 ```
 
-```python
-import kittn
+## JSONRPC/websockets
 
-api = kittn.authorize('meowmeowmeow')
-api.kittens.get(2)
+JSONRPC requests can be made via websocket. The websocket endpoint is at `/websocket`, e.g. `http://localhost:46657/websocket`.  Asynchronous RPC functions like event `subscribe` and `unsubscribe` are only available via websockets.
+
+
+## More Examples
+
+See the various bash tests using curl in `test/`, and examples using the `Go` API in `rpc/client/`.
+
+# Endpoints
+
+## Get the list
+
+An HTTP Get request to the root RPC endpoint (e.g. `http://localhost:46657`) shows a list of available endpoints.
+
+```bash
+curl 'http://localhost:46657'
 ```
+
+> Response:
+
+```plain
+Available endpoints:
+http://localhost:46657/abci_info
+http://localhost:46657/dump_consensus_state
+http://localhost:46657/genesis
+http://localhost:46657/net_info
+http://localhost:46657/num_unconfirmed_txs
+http://localhost:46657/status
+http://localhost:46657/unconfirmed_txs
+http://localhost:46657/unsafe_flush_mempool
+http://localhost:46657/unsafe_stop_cpu_profiler
+http://localhost:46657/validators
+
+Endpoints that require arguments:
+http://localhost:46657/abci_query?path=_&data=_&prove=_
+http://localhost:46657/block?height=_
+http://localhost:46657/blockchain?minHeight=_&maxHeight=_
+http://localhost:46657/broadcast_tx_async?tx=_
+http://localhost:46657/broadcast_tx_commit?tx=_
+http://localhost:46657/broadcast_tx_sync?tx=_
+http://localhost:46657/commit?height=_
+http://localhost:46657/dial_seeds?seeds=_
+http://localhost:46657/subscribe?event=_
+http://localhost:46657/tx?hash=_&prove=_
+http://localhost:46657/unsafe_start_cpu_profiler?filename=_
+http://localhost:46657/unsafe_write_heap_profile?filename=_
+http://localhost:46657/unsubscribe?event=_
+```
+
+## Tx
 
 ```shell
-curl "http://example.com/api/kittens/2"
-  -H "Authorization: meowmeowmeow"
+curl "http://localhost:46657/tx?hash=0x2B8EC32BA2579B3B8606E42C06DE2F7AFA2556EF"
 ```
 
-```javascript
-const kittn = require('kittn');
-
-let api = kittn.authorize('meowmeowmeow');
-let max = api.kittens.get(2);
+```go
+client := client.NewHTTP("tcp://0.0.0.0:46657", "/websocket")
+tx, err := client.Tx([]byte("2B8EC32BA2579B3B8606E42C06DE2F7AFA2556EF"), true)
 ```
 
 > The above command returns JSON structured like this:
 
 ```json
 {
-  "id": 2,
-  "name": "Max",
-  "breed": "unknown",
-  "fluffiness": 5,
-  "cuteness": 10
+  "error": "",
+  "result": {
+    "proof": {
+      "Proof": {
+        "aunts": []
+      },
+      "Data": "YWJjZA==",
+      "RootHash": "2B8EC32BA2579B3B8606E42C06DE2F7AFA2556EF",
+      "Total": 1,
+      "Index": 0
+    },
+    "tx": "YWJjZA==",
+    "tx_result": {
+      "log": "",
+      "data": "",
+      "code": 0
+    },
+    "index": 0,
+    "height": 52
+  },
+  "id": "",
+  "jsonrpc": "2.0"
 }
 ```
 
-This endpoint retrieves a specific kitten.
+Returns a transaction matching the given transaction hash.
 
-<aside class="warning">Inside HTML code blocks like this one, you can't use Markdown, so use <code>&lt;code&gt;</code> blocks to denote code.</aside>
+### Query Parameters
 
-### HTTP Request
+Parameter | Default | Required | Description
+--------- | ------- | -------- | -----------
+hash      | nil     | true     | The transaction hash
+prove     | false   | false    | Include a proof of the transaction inclusion in the block in the result (optional, default: false)
 
-`GET http://example.com/kittens/<ID>`
+### Returns
 
-### URL Parameters
-
-Parameter | Description
---------- | -----------
-ID | The ID of the kitten to retrieve
-
+- `proof`: the `types.TxProof` object
+- `tx`: `[]byte` - the transaction
+- `tx_result`: the `abci.Result` object
+- `index`: `int` - index of the transaction
+- `height`: `int` - height of the block where this transaction was in
